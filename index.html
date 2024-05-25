@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>結果処理ツール</title>
+    <style>
+        .input-box {
+            margin-bottom: 10px;
+        }
+        .result-box {
+            margin-top: 20px;
+        }
+        textarea {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Live Challenge Calculator</h1>
+    GeoGuessrの複数のLive Challengeの結果からまとめた表を作ります。
+    ※英語バージョンのみ対応<br>
+    <ol>
+        <li>集計したいLive Challengeのリザルトページにアクセスする。</li>
+        <li><font color="red">※「ウェーイ！！」という歓声が聞こえたときのリザルトが必須です。(Summary)ボタン押さないでください！！！</font></li>
+        <li>Ctrlキー + A からの Ctrlキー + C ですべてコピー (Macはcommandキー)</li>
+        <li>直下のボックスにペースト、入力したいリザルトの数だけ<b>[入力ボックスを追加]</b>ボタンをクリックする。</li>
+        <li>CSV Aggregatorにcsvデータ（カンマ区切りのリザルト）が入力されているのが確認する。</li>
+        <li><b>必要なリザルトを全て貼り終えたら[結果を処理]</b>ボタンをクリックする。</li>
+        <li><b>[コピー]</b>ボタンをクリックし、表計算ソフトに貼り付ける。</li>
+    </ol>
+    <div id="input-container">
+        <div class="input-box">
+            <textarea rows="10" cols="50" placeholder="入力ファイルの内容をここに貼り付けてください"></textarea>
+        </div>
+    </div>
+    <button onclick="addInputBox()">入力ボックスを追加</button>
+    <button onclick="processResults()">結果を処理</button>
+    <button onclick="clearInputs()">クリア</button>
+    <div id="result" class="result-box">
+        <textarea id="result-textarea" rows="10" cols="50" readonly></textarea>
+        <button onclick="copyResult()">コピー</button>
+        <br>スプレッドシートにペーストする際は、<b>[データ] -> [テキストを列に分割]</b> を忘れずに
+    </div>
+    <script>
+        function addInputBox() {
+            const inputContainer = document.getElementById('input-container');
+            const newInputBox = document.createElement('div');
+            newInputBox.classList.add('input-box');
+            newInputBox.innerHTML = '<textarea rows="10" cols="50" placeholder="入力ファイルの内容をここに貼り付けてください"></textarea>';
+            inputContainer.appendChild(newInputBox);
+        }
+
+        function clearInputs() {
+            const inputContainer = document.getElementById('input-container');
+            inputContainer.innerHTML = '<div class="input-box"><textarea rows="10" cols="50" placeholder="入力ファイルの内容をここに貼り付けてください"></textarea></div>';
+            document.getElementById('result-textarea').value = "";
+        }
+
+        function parseInput(inputText) {
+            const lines = inputText.split("\n");
+            const startIndex = lines.indexOf("Final results") + 1;
+            const relevantLines = lines.slice(startIndex);
+            const parsedResults = [];
+            for (let i = 0; i < relevantLines.length - 3; i += 4) {
+                if (i + 2 < relevantLines.length) {
+                    let rank = relevantLines[i].replace(".", "").trim();
+                    let name = relevantLines[i + 1].trim();
+                    let points = relevantLines[i + 3].trim();
+                    points = points.replace(/[,points ]/g, "");
+                    parsedResults.push({ rank, name, points: parseFloat(points) });
+                }
+            }
+            return parsedResults;
+        }
+
+        function generateCSV(parsedResults) {
+            let csvOutput = "rank,name,points\n";
+            parsedResults.forEach(result => {
+                csvOutput += `${result.rank},${result.name},${result.points}\n`;
+            });
+            return csvOutput;
+        }
+
+        function processResults() {
+            const textareas = document.querySelectorAll('#input-container textarea');
+            const parsedResultsList = [];
+
+            textareas.forEach(textarea => {
+                const inputText = textarea.value;
+                const parsedResults = parseInput(inputText);
+                parsedResultsList.push(parsedResults);
+            });
+
+            const allNames = new Set();
+            parsedResultsList.forEach(parsedResults => {
+                parsedResults.forEach(result => {
+                    allNames.add(result.name);
+                });
+            });
+
+            const totalPointsDict = {};
+            const countDict = {};
+            allNames.forEach(name => {
+                let totalPoints = 0;
+                let count = 0;
+                parsedResultsList.forEach(parsedResults => {
+                    parsedResults.forEach(result => {
+                        if (result.name === name) {
+                            totalPoints += result.points;
+                            count += 1;
+                        }
+                    });
+                });
+                totalPointsDict[name] = totalPoints;
+                countDict[name] = count;
+            });
+
+            const averagePointsDict = {};
+            allNames.forEach(name => {
+                averagePointsDict[name] = totalPointsDict[name] / countDict[name];
+            });
+
+            let resultCSV = "Name,Total_Points,Average_Points,Count\n";
+            allNames.forEach(name => {
+                resultCSV += `${name},${totalPointsDict[name]},${averagePointsDict[name]},${countDict[name]}\n`;
+            });
+
+            document.getElementById('result-textarea').value = resultCSV;
+        }
+
+        function copyResult() {
+            const resultTextarea = document.getElementById('result-textarea');
+            resultTextarea.select();
+            document.execCommand('copy');
+        }
+    </script>
+</body>
+</html>
