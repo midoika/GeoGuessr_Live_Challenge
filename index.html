@@ -123,7 +123,7 @@
 
             let resultCSV = "Name,Total_Points,Average_Points,Count\n";
             allNames.forEach(name => {
-                resultCSV += `${name},${totalPointsDict[name]},${averagePointsDict[name].toFixed(3},${countDict[name]}\n`;
+                resultCSV += `${name},${totalPointsDict[name]},${averagePointsDict[name]},${countDict[name]}\n`;
             });
 
             document.getElementById('result-textarea').value = resultCSV;
